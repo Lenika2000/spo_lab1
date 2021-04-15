@@ -266,42 +266,39 @@ void read_file_data(char* to, char* filename, char* filedata, struct xfs_state* 
     // возвращаемся на изначальный адрес
     xfs_state->address = saved_address;
 
-    struct xfs_bmbt_irec bmbt[dinode.di_core.di_nextents];
+    struct xfs_bmbt_irec bmbt;
 
-    for (int i = 0; i < dinode.di_core.di_nextents; ++i) {
-        xfs_uint64_t l0 = bswap_64(dinode.di_u.di_bmx[i].l0);
-        xfs_uint64_t l1 = bswap_64(dinode.di_u.di_bmx[i].l1);
-        swap(l0, l1);
-        // преобразование экстента в несжатую форму (Извлеките начальное поле из записи экстента bmap в памяти.)
-        bmbt[i].br_state = XFS_EXT_NORM;
-        int ext_flag = (l0 >> (64 - BMBT_EXNTFLAG_BITLEN));
-        bmbt[i].br_startoff = ((xfs_fileoff_t)l0 &
-                            xfs_mask64lo(64 - BMBT_EXNTFLAG_BITLEN)) >> 9; // EXACT (no * sb inodesize) address of data
-        bmbt[i].br_startblock = (xfs_fsblock_t)(((xfs_dfsbno_t)l1) >> 21);
-        bmbt[i].br_blockcount = (xfs_filblks_t)(l1 & xfs_mask64lo(21));
-    }
+    xfs_uint64_t l0 = bswap_64(dinode.di_u.di_bmx->l0);
+    xfs_uint64_t l1 = bswap_64(dinode.di_u.di_bmx->l1);
+    swap(l0, l1);
+    // преобразование экстента в несжатую форму (Извлеките начальное поле из записи экстента bmap в памяти.)
+    bmbt.br_state = XFS_EXT_NORM;
+    bmbt.br_startoff = ((xfs_fileoff_t)l0 &
+                        xfs_mask64lo(64 - BMBT_EXNTFLAG_BITLEN)) >> 9; // EXACT (no * sb inodesize) address of data
+    bmbt.br_startblock = (((xfs_fsblock_t)l0 & xfs_mask64lo(9)) << 43) |
+                         (((xfs_fsblock_t)l1) >> 21);
+    bmbt.br_blockcount = (xfs_filblks_t)(l1 & xfs_mask64lo(21));
 
 //    if (bmbt.br_startoff == 0) {
 //        free(_filedata);
 //        return;
 //    }
-
+    fseek(xfs_state->file_pointer, bmbt.br_startoff, SEEK_SET);
+    // пока не дойдем до конца файла, считываем его
+    char *buffer = malloc(sizeof(char) * 512);
     strcat(to, filename);
     FILE* fp = fopen(to, "wb");
-    int32_t size = dinode.di_core.di_extsize;
-    char *buffer = malloc(size);
-    for (int i = 0; i < dinode.di_core.di_nextents; ++i) {
-        fseek(xfs_state->file_pointer, bmbt[i].br_startoff, SEEK_SET);
-
-        int mun = 0;
-        fread(buffer, sizeof(char), size, xfs_state->file_pointer);
-        fwrite(buffer, sizeof(char), size, fp);
+    fwrite(buffer, strlen(buffer), 1, fp);
+    int mun = 0;
+    while (( fread(buffer, sizeof(char), 512, xfs_state->file_pointer)) && (mun = strlen(buffer))==512)  //чтение копируемого файла до конца
+    {
+        fwrite(buffer, sizeof(char), 512, fp);//запись копии в новый файл
+        // передвижение указателей
+        fseek(xfs_state->file_pointer,512, SEEK_CUR);
+//        fseek(fin, SIZE, SEEK_CUR);
+//        fseek(fout, SIZE, SEEK_CUR);
     }
-    // пока не дойдем до конца файла, считываем его
-//
-//    fwrite(buffer, strlen(buffer), 1, fp);
-
-    free(buffer);
+    fwrite(buffer, sizeof(char), mun, fp);
     fclose(fp);
 
 //    while ((input_char = fgetc(xfs_state->file_pointer)) != '\0') {
