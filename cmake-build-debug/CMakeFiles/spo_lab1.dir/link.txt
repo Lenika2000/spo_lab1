@@ -1,0 +1,1 @@
+/usr/bin/cc -g CMakeFiles/spo_lab1.dir/main.c.o CMakeFiles/spo_lab1.dir/part1.c.o CMakeFiles/spo_lab1.dir/part2.c.o CMakeFiles/spo_lab1.dir/utils.c.o CMakeFiles/spo_lab1.dir/xfs_operations.c.o -o spo_lab1 

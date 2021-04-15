@@ -1,0 +1,8 @@
+find_path(BLKID_INCLUDE_DIR blkid/blkid.h)
+
+find_library(BLKID_LIBRARIES blkid)
+
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(blkid DEFAULT_MSG BLKID_LIBRARIES BLKID_INCLUDE_DIR)
+
+mark_as_advanced(BLKID_LIBRARIES BLKID_INCLUDE_DIR)
