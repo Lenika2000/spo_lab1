@@ -257,9 +257,6 @@ void read_file_data(char* to, char* filename, char* filedata, struct xfs_state* 
     unsigned long long saved_address = xfs_state->address;
     // находим inode, связанный с искомым файлом
     long finode = find_file_inode(filename, xfs_state);
-    size_t _filedata_size = 0;
-    char* _filedata = calloc(TMP_MAX, sizeof(char));
-    char input_char;
     // переходим к данному inod'у
     xfs_state->address = finode * xfs_state->sb.sb_inodesize;
     read_dinode(xfs_state, &dinode);
@@ -279,40 +276,27 @@ void read_file_data(char* to, char* filename, char* filedata, struct xfs_state* 
                          (((xfs_fsblock_t)l1) >> 21);
     bmbt.br_blockcount = (xfs_filblks_t)(l1 & xfs_mask64lo(21));
 
-//    if (bmbt.br_startoff == 0) {
-//        free(_filedata);
-//        return;
-//    }
+    if (bmbt.br_startoff == 0) {
+        return;
+    }
+
     fseek(xfs_state->file_pointer, bmbt.br_startoff, SEEK_SET);
     // пока не дойдем до конца файла, считываем его
     char *buffer = malloc(sizeof(char) * 512);
     strcat(to, filename);
     FILE* fp = fopen(to, "wb");
-    fwrite(buffer, strlen(buffer), 1, fp);
-    int mun = 0;
-    while (( fread(buffer, sizeof(char), 512, xfs_state->file_pointer)) && (mun = strlen(buffer))==512)  //чтение копируемого файла до конца
+//    fwrite(buffer, strlen(buffer), 1, fp);
+    int buf_size = 512;
+    int count = 0;
+    while (( fread(buffer, sizeof(char), buf_size, xfs_state->file_pointer)) && (count = strlen(buffer))==buf_size)  //чтение копируемого файла до конца
     {
-        fwrite(buffer, sizeof(char), 512, fp);//запись копии в новый файл
+        fwrite(buffer, sizeof(char), buf_size, fp);//запись копии в новый файл
         // передвижение указателей
-        fseek(xfs_state->file_pointer,512, SEEK_CUR);
-//        fseek(fin, SIZE, SEEK_CUR);
-//        fseek(fout, SIZE, SEEK_CUR);
+        fseek(xfs_state->file_pointer,buf_size, SEEK_CUR);
     }
-    fwrite(buffer, sizeof(char), mun, fp);
+    fwrite(buffer, sizeof(char), count, fp);
+    free(buffer);
     fclose(fp);
-
-//    while ((input_char = fgetc(xfs_state->file_pointer)) != '\0') {
-//        _filedata[_filedata_size++] = input_char;
-//    }
-    // определяем конец файла
-//    _filedata[_filedata_size] = '\0';
-//
-//    if (filedata == NULL) {
-//        filedata = _filedata;
-//    } else {
-//        strcpy(filedata, _filedata);
-//        free(_filedata);
-//    }
 }
 
 void dir_copy(char* output_buf, char* to, struct xfs_state* xfs_state) {
