@@ -37,7 +37,7 @@ void destroy(struct xfs_state* xfs_state);
 void xfs_ls(char* output_buf, struct xfs_state* xfs_state);
 void xfs_copy(char* output_buf, char* from, char* to, struct xfs_state* xfs_state);
 void xfs_pwd(char* output_buf, struct xfs_state* xfs_state);
-void xfs_cd(char* output_buf, char* path, struct xfs_state* xfs_state);
+int xfs_cd(char* output_buf, char* path, struct xfs_state* xfs_state);
 void execute_help(char* output_buf);
 
 #endif

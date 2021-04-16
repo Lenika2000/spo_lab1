@@ -251,7 +251,7 @@ static long find_file_inode(char* filename, struct xfs_state* xfs_state) {
     return find_inode(filename, 1, xfs_state);
 }
 
-void read_file_data(char* to, char* filename, char* filedata, struct xfs_state* xfs_state) {
+void read_file_data(char* to, char* filename, struct xfs_state* xfs_state) {
     struct xfs_dinode dinode;
     // сохраняем наш изначальный адрес
     unsigned long long saved_address = xfs_state->address;
@@ -262,9 +262,7 @@ void read_file_data(char* to, char* filename, char* filedata, struct xfs_state* 
     read_dinode(xfs_state, &dinode);
     // возвращаемся на изначальный адрес
     xfs_state->address = saved_address;
-
     struct xfs_bmbt_irec bmbt;
-
     xfs_uint64_t l0 = bswap_64(dinode.di_u.di_bmx->l0);
     xfs_uint64_t l1 = bswap_64(dinode.di_u.di_bmx->l1);
     swap(l0, l1);
@@ -279,22 +277,22 @@ void read_file_data(char* to, char* filename, char* filedata, struct xfs_state* 
     if (bmbt.br_startoff == 0) {
         return;
     }
-
     fseek(xfs_state->file_pointer, bmbt.br_startoff, SEEK_SET);
-    // пока не дойдем до конца файла, считываем его
-    char *buffer = malloc(sizeof(char) * 512);
+    int buf_size = 512;
+    char *buffer = malloc(sizeof(char) * buf_size);
     strcat(to, filename);
     FILE* fp = fopen(to, "wb");
-//    fwrite(buffer, strlen(buffer), 1, fp);
-    int buf_size = 512;
-    int count = 0;
-    while (( fread(buffer, sizeof(char), buf_size, xfs_state->file_pointer)) && (count = strlen(buffer))==buf_size)  //чтение копируемого файла до конца
-    {
-        fwrite(buffer, sizeof(char), buf_size, fp);//запись копии в новый файл
-        // передвижение указателей
-        fseek(xfs_state->file_pointer,buf_size, SEEK_CUR);
+    int file_size = dinode.di_core.di_size;
+    while (file_size > 0) {
+        if (file_size < buf_size) {
+            fread(buffer, sizeof(char), file_size, xfs_state->file_pointer);
+            fwrite(buffer, sizeof(char), file_size, fp);//запись копии в новый файл
+        } else {
+            fread(buffer, sizeof(char), buf_size, xfs_state->file_pointer);
+            fwrite(buffer, sizeof(char), buf_size, fp);//запись копии в новый файл
+        }
+        file_size = file_size - buf_size;
     }
-    fwrite(buffer, sizeof(char), count, fp);
     free(buffer);
     fclose(fp);
 }
@@ -326,13 +324,12 @@ void dir_copy(char* output_buf, char* to, struct xfs_state* xfs_state) {
             token = strtok(token, "\n");
         } else {
             // текущая сущность - файл
-            read_file_data(to ,buffer2, buffer, xfs_state);
-//            strcat(to, buffer2);
-//            FILE* fp = fopen(to, "w");
-//            fwrite(buffer, strlen(buffer), 1, fp);
-//            fclose(fp);
+            read_file_data(to ,buffer2, xfs_state);
             snprintf(out_buf, PATH_MAX*2 + 20, "Извлечение %s%s в %s\n", xfs_state->path, buffer2, to);
-            split_path(to, NULL);
+            token = strtok(NULL, "\n");
+            if (token == NULL) {
+                split_path(to, NULL);
+            }
             strcat(output_buf, out_buf);
             buffer[0] = '\0';
             // выделение очередной части строки
@@ -350,7 +347,10 @@ void xfs_copy(char* output_buf, char* from, char* to, struct xfs_state* xfs_stat
 
     strcpy(user_path, xfs_state->path);
     // переходим в папку, откуда будем осуществлять копирование
-    xfs_cd(output_buf, from, xfs_state);
+    if (xfs_cd(output_buf, from, xfs_state) == 0) {
+        read_file_data(to ,from, xfs_state);
+        snprintf(output_buf, PATH_MAX*2 + 20, "Извлечение %s%s в %s\n", xfs_state->path, from, to);
+    };
     // если была найдена неизвестная директория
     if (output_buf[0] != '\0') {
         return;
@@ -366,7 +366,7 @@ void xfs_pwd(char* output_buf, struct xfs_state* xfs_state) {
     strcat(output_buf, "\n");
 }
 
-void xfs_cd(char* output_buf, char* path, struct xfs_state* xfs_state) {
+int xfs_cd(char* output_buf, char* path, struct xfs_state* xfs_state) {
     struct xfs_dinode saved_dinode = xfs_state->dinode;
     unsigned long long saved_address = xfs_state->address;
     unsigned long long inode;
@@ -387,6 +387,14 @@ void xfs_cd(char* output_buf, char* path, struct xfs_state* xfs_state) {
     while (token != NULL) {
         // получаем id  директории в пути
         inode = find_dir_inode(token, xfs_state);
+        long fileInode = find_file_inode(token, xfs_state);
+        // если директория оказалась файлом
+        if (fileInode != -1) {
+//            xfs_state->address = inode * xfs_state->sb.sb_inodesize;
+//            // читаем информацию о полученном inode, перемещая указатель
+//            read_dinode(xfs_state, &xfs_state->dinode);
+            return 0;
+        }
         // если такой директории не существует
         if (inode == -1) {
             // восстанавлием состояние полей dinode и address
@@ -394,7 +402,7 @@ void xfs_cd(char* output_buf, char* path, struct xfs_state* xfs_state) {
             xfs_state->address = saved_address;
             strcpy(output_buf, "Неизвестная директория\n");
             free(tempstr);
-            return;
+            return -1;
         }
         xfs_state->address = inode * xfs_state->sb.sb_inodesize;
         // читаем информацию о полученном inode, перемещая указатель
@@ -405,6 +413,7 @@ void xfs_cd(char* output_buf, char* path, struct xfs_state* xfs_state) {
     // в поле path записываем значение пути из аргумента команды cd
     construct_path(path, xfs_state->path);
     free(tempstr);
+    return 1;
 }
 
 void execute_help(char* output_buf) {

@@ -41,9 +41,9 @@ void do_operation(char* input, struct xfs_state* xfs_state) {
     }
     execute_xfs_operation(selected_command, output_buf, argc, argv, xfs_state);
     printf("%s", output_buf);
-    for (int i = 0; i < argc; i++) {
-        free(argv[i]);
-    }
+//    for (int i = 0; i < argc; i++) {
+//        free(argv[i]);
+//    }
 }
 
 void do_task_2(char* start_path) {
