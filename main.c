@@ -1,5 +1,5 @@
-#include "part2.h"
-#include "part1.h"
+#include "includes/part2.h"
+#include "includes/part1.h"
 
 int main(int argc, char** argv) {
     if (argc == 1) {

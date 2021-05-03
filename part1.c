@@ -1,6 +1,6 @@
 #include <dirent.h>
 #include <malloc.h>
-#include "part1.h"
+#include "includes/part1.h"
 
 int startsWith(const char *str, const char *pre) {
     size_t lenpre = strlen(pre),
@@ -90,11 +90,12 @@ void add_disk_partition_info(struct disk_info *info, struct dirent *sys_block_ch
     free(buffer);
 }
 
-void run_list_mode() {
+char* run_list_mode() {
     const int32_t MAX_DISKS = 256;
     const char *sys_block_path = "/sys/block/";
     struct disk_info *disks = (struct disk_info *) malloc(MAX_DISKS * sizeof(struct disk_info));
     struct disk_info *partitions = (struct disk_info *) malloc(MAX_DISKS * sizeof(struct disk_info));
+    char* output_buf = malloc(TMP_MAX);
 
     DIR *sys_block_dir = opendir(sys_block_path);
     DIR *sys_block_disk_dir;
@@ -127,12 +128,22 @@ void run_list_mode() {
         closedir(sys_block_dir);
     }
     for (int i = 0; i < disks_counter; ++i) {
-        printf("disk name: %s\n", disks[i].disk_name);
+        strcat(output_buf, "disk name:\t");
+        strcat(output_buf, disks[i].disk_name);
+        strcat(output_buf, "\n");
     }
     for (int i = 0; i < parts_counter; ++i) {
-        printf("partition name: %s (%s %s)\n",
-               partitions[i].disk_name, partitions[i].fs_type, partitions[i].fs_version);
+        strcat(output_buf, "partition name:\t");
+        strcat(output_buf, partitions[i].disk_name);
+        strcat(output_buf, "\t(");
+        strcat(output_buf, partitions[i].fs_type);
+        strcat(output_buf, "\t");
+        strcat(output_buf, partitions[i].fs_version);
+        strcat(output_buf, ")\n");
+//        printf("partition name: %s (%s %s)\n",
+//               partitions[i].disk_name, partitions[i].fs_type, partitions[i].fs_version);
     }
+    return output_buf;
 }
 
 void do_task_1() {

@@ -1,4 +1,4 @@
-#include "part2.h"
+#include "includes/part2.h"
 
 void read_user_input(char* input) {
     input[0] = '\0';
@@ -50,7 +50,7 @@ void do_task_2(char* start_path) {
     char input[MAX_INPUT_LENGTH] = {'\0'};
     struct xfs_state* xfs_state = NULL;
     // инициализация фс, считывание информации из суперблока и первого inode
-    xfs_state = init(start_path, NULL);
+    xfs_state = init(start_path);
     do {
         read_user_input(input);
         do_operation(input, xfs_state);
