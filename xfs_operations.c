@@ -1,4 +1,7 @@
 #include "includes/xfs_operations.h"
+#include "includes/part2.h"
+
+struct xfs_state* xfs_state = NULL;
 
 static inline __uint64_t xfs_mask64lo(int n) {
     return ((__uint64_t) 1 << (n)) - 1;
@@ -338,8 +341,10 @@ void dir_copy(char* output_buf, char* to, struct xfs_state* xfs_state) {
     }
 }
 
-void xfs_ls(char* output_buf, struct xfs_state* xfs_state) {
+char* xfs_ls() {
+    char* output_buf = malloc(TMP_MAX);
     xfs_readdir(output_buf, xfs_state);
+    return output_buf;
 }
 
 void xfs_copy(char* output_buf, char* from, char* to, struct xfs_state* xfs_state) {
@@ -360,10 +365,17 @@ void xfs_copy(char* output_buf, char* from, char* to, struct xfs_state* xfs_stat
     xfs_cd(output_buf, user_path, xfs_state);
 }
 
-void xfs_pwd(char* output_buf, struct xfs_state* xfs_state) {
+char* xfs_pwd() {
+    char* output_buf = malloc(TMP_MAX);
     // получаем путь, записанный в поле path
     strcpy(output_buf, xfs_state->path);
-    strcat(output_buf, "\n");
+    return output_buf;
+}
+
+char* xfs_cd_perl(char* path) {
+    char* output_buf = malloc(TMP_MAX);
+    xfs_cd(output_buf, path, xfs_state);
+    return output_buf;
 }
 
 int xfs_cd(char* output_buf, char* path, struct xfs_state* xfs_state) {
@@ -400,7 +412,8 @@ int xfs_cd(char* output_buf, char* path, struct xfs_state* xfs_state) {
             // восстанавлием состояние полей dinode и address
             xfs_state->dinode = saved_dinode;
             xfs_state->address = saved_address;
-            strcpy(output_buf, "Неизвестная директория\n");
+            strcat(output_buf, "Неизвестная директория\n");
+//            printf("Неизвестная директория\n");
             free(tempstr);
             return -1;
         }
@@ -413,7 +426,7 @@ int xfs_cd(char* output_buf, char* path, struct xfs_state* xfs_state) {
     // в поле path записываем значение пути из аргумента команды cd
     construct_path(path, xfs_state->path);
     free(tempstr);
-    return 1;
+    return 0;
 }
 
 void execute_help(char* output_buf) {
@@ -426,4 +439,9 @@ void execute_help(char* output_buf) {
         strcat(output_buf, operations[i].description);
         strcat(output_buf, "\n");
     }
+}
+
+int init_xfs(char* xfs_path) {
+    xfs_state = init(xfs_path, xfs_state);
+    return xfs_state->error;
 }

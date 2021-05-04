@@ -50,7 +50,7 @@ void do_task_2(char* start_path) {
     char input[MAX_INPUT_LENGTH] = {'\0'};
     struct xfs_state* xfs_state = NULL;
     // инициализация фс, считывание информации из суперблока и первого inode
-    xfs_state = init(start_path);
+    xfs_state = init(start_path, NULL);
     do {
         read_user_input(input);
         do_operation(input, xfs_state);

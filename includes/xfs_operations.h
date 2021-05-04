@@ -16,9 +16,9 @@
 
 enum xfs_error {
     OK = 0,
-    UNSUPPORTED_FILESYSTEM,
-    CANT_READ_SB,
-    CANT_READ_DINODE
+    UNSUPPORTED_FILESYSTEM = 1,
+    CANT_READ_SB = 2,
+    CANT_READ_DINODE = 3
 };
 
 struct xfs_state {
@@ -34,10 +34,12 @@ struct xfs_state {
 struct xfs_state* init(char* fs_path, struct xfs_state* xfs_state);
 void destroy(struct xfs_state* xfs_state);
 
-void xfs_ls(char* output_buf, struct xfs_state* xfs_state);
+char* xfs_ls();
 void xfs_copy(char* output_buf, char* from, char* to, struct xfs_state* xfs_state);
-void xfs_pwd(char* output_buf, struct xfs_state* xfs_state);
+char* xfs_pwd();
 int xfs_cd(char* output_buf, char* path, struct xfs_state* xfs_state);
+char* xfs_cd_perl(char* path);
 void execute_help(char* output_buf);
+int init_xfs(char* xfs_path);
 
 #endif
