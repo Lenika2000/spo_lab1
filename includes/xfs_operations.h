@@ -35,7 +35,7 @@ struct xfs_state* init(char* fs_path, struct xfs_state* xfs_state);
 void destroy(struct xfs_state* xfs_state);
 
 char* xfs_ls();
-void xfs_copy(char* output_buf, char* from, char* to, struct xfs_state* xfs_state);
+char* xfs_copy(char* from, char* to);
 char* xfs_pwd();
 int xfs_cd(char* output_buf, char* path, struct xfs_state* xfs_state);
 char* xfs_cd_perl(char* path);

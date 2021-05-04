@@ -23,6 +23,7 @@ my $ffi = FFI::Platypus->new(api => 1);
     $ffi->attach("xfs_ls" => [ "void" ] => "string");
     $ffi->attach("xfs_pwd" => [ "void" ] => "string");
     $ffi->attach("xfs_cd_perl" => [ "string" ] => "string");
+    $ffi->attach("xfs_copy" => [ "string","string" ] => "string");
 }
 
 my $currDirName = '/';
@@ -50,7 +51,8 @@ my %command = (
         return 1;
     },
     'cp'      => sub {
-        copyToHost($_[0], $_[1]);
+        my $cp = xfs_copy($_[0], $_[1]);
+        print($cp);
         return 1;
     },
     'cd'      => sub {

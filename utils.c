@@ -25,7 +25,7 @@ void execute_xfs_operation(enum command command_type, char* output_buf, int argc
             break;
         case COPY:
             if (argc == 2) {
-                xfs_copy(output_buf, argv[0], argv[1], xfs_state);
+//                xfs_copy(output_buf, argv[0], argv[1], xfs_state);
             } else {
                 printf("Данное количество аргументов не поддерживается.\n");
             }

@@ -347,7 +347,8 @@ char* xfs_ls() {
     return output_buf;
 }
 
-void xfs_copy(char* output_buf, char* from, char* to, struct xfs_state* xfs_state) {
+char* xfs_copy(char* from, char* to) {
+    char* output_buf = malloc(TMP_MAX);
     char user_path[PATH_MAX];
 
     strcpy(user_path, xfs_state->path);
@@ -357,12 +358,13 @@ void xfs_copy(char* output_buf, char* from, char* to, struct xfs_state* xfs_stat
         snprintf(output_buf, PATH_MAX*2 + 20, "Извлечение %s%s в %s\n", xfs_state->path, from, to);
     };
     // если была найдена неизвестная директория
-    if (output_buf[0] != '\0') {
-        return;
+    if (strcmp(output_buf, "Неизвестная директория!\n") == 0) {
+        return output_buf;
     }
     dir_copy(output_buf, to, xfs_state);
     // возвращаемся в ту директорию, где и начинали операцию копирования
     xfs_cd(output_buf, user_path, xfs_state);
+    return output_buf;
 }
 
 char* xfs_pwd() {
