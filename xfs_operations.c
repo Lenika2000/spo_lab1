@@ -336,10 +336,11 @@ int dir_copy(char* output_buf, char* to, struct xfs_state* xfs_state) {
             // текущая сущность - файл
             read_file_data(to ,buffer2, xfs_state);
             snprintf(out_buf, PATH_MAX*2 + 20, "Извлечение %s%s в %s\n", xfs_state->path, buffer2, to);
+            // убираем скопированный файл
             token = strtok(NULL, "\n");
-            if (token == NULL) {
+//            if (token == NULL) {
                 split_path(to, NULL);
-            }
+//            }
             strcat(output_buf, out_buf);
             buffer[0] = '\0';
             // выделение очередной части строки
@@ -375,7 +376,7 @@ char* xfs_copy(char* from, char* to) {
             return output_buf;
         }
     }
-
+    mkdir(strcat(to, xfs_state->path) , ACCESSPERMS);
     if (dir_copy(output_buf, to, xfs_state) == ERR_COPY_FILE) {
         strcat(output_buf, "Невозможно осуществить копирование по данному пути ");
         strcat(output_buf, to);
