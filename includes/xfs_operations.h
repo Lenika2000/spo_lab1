@@ -2,6 +2,11 @@
 #define XFS_OPERATIONS_H_
 
 #define XFS_SB_MAGIC 0x58465342 // from docs
+#define UNKNOWN_DIR -1
+#define ONLY_FILE -2
+#define ERR_TO_OPEN_FILE -3
+#define ERR_COPY_FILE -4
+
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,7 +38,6 @@ struct xfs_state {
 
 struct xfs_state* init(char* fs_path, struct xfs_state* xfs_state);
 void destroy(struct xfs_state* xfs_state);
-
 char* xfs_ls();
 char* xfs_copy(char* from, char* to);
 char* xfs_pwd();

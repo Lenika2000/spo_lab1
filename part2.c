@@ -39,7 +39,7 @@ void do_operation(char* input, struct xfs_state* xfs_state) {
         // подсчитываем количество аргументов
         argc += 1;
     }
-    execute_xfs_operation(selected_command, output_buf, argc, argv, xfs_state);
+//    execute_xfs_operation(selected_command, output_buf, argc, argv, xfs_state);
     printf("%s", output_buf);
 //    for (int i = 0; i < argc; i++) {
 //        free(argv[i]);

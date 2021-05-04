@@ -254,7 +254,7 @@ static long find_file_inode(char* filename, struct xfs_state* xfs_state) {
     return find_inode(filename, 1, xfs_state);
 }
 
-void read_file_data(char* to, char* filename, struct xfs_state* xfs_state) {
+int read_file_data(char* to, char* filename, struct xfs_state* xfs_state) {
     struct xfs_dinode dinode;
     // сохраняем наш изначальный адрес
     unsigned long long saved_address = xfs_state->address;
@@ -278,13 +278,16 @@ void read_file_data(char* to, char* filename, struct xfs_state* xfs_state) {
     bmbt.br_blockcount = (xfs_filblks_t)(l1 & xfs_mask64lo(21));
 
     if (bmbt.br_startoff == 0) {
-        return;
+        return 0;
     }
     fseek(xfs_state->file_pointer, bmbt.br_startoff, SEEK_SET);
     int buf_size = 512;
     char *buffer = malloc(sizeof(char) * buf_size);
     strcat(to, filename);
     FILE* fp = fopen(to, "wb");
+    if (fp == NULL) {
+        return ERR_TO_OPEN_FILE;
+    }
     int file_size = dinode.di_core.di_size;
     while (file_size > 0) {
         if (file_size < buf_size) {
@@ -298,9 +301,10 @@ void read_file_data(char* to, char* filename, struct xfs_state* xfs_state) {
     }
     free(buffer);
     fclose(fp);
+    return 0;
 }
 
-void dir_copy(char* output_buf, char* to, struct xfs_state* xfs_state) {
+int dir_copy(char* output_buf, char* to, struct xfs_state* xfs_state) {
     char files_list[TMP_MAX] = {'\0'};
     char buffer[TMP_MAX] = {'\0'};
     char out_buf[PATH_MAX*2 + 20] = {'\0'};
@@ -316,7 +320,10 @@ void dir_copy(char* output_buf, char* to, struct xfs_state* xfs_state) {
             xfs_cd(buffer, buffer2, xfs_state);
             strcat(to, buffer2);
             // создаем директорию ACCESSPERMS: Equivalent of 777 = rwxrwxrwx
-            mkdir(to, ACCESSPERMS);
+            int result = mkdir(to, ACCESSPERMS);
+            if (result == -1) {
+                return ERR_COPY_FILE;
+            }
             token += strlen(token) + 1;
             // рекурсивно вызываем этот же метод
             dir_copy(output_buf, to, xfs_state);
@@ -336,7 +343,7 @@ void dir_copy(char* output_buf, char* to, struct xfs_state* xfs_state) {
             strcat(output_buf, out_buf);
             buffer[0] = '\0';
             // выделение очередной части строки
-            token = strtok(NULL, "\n");
+//            token = strtok(NULL, "\n");
         }
     }
 }
@@ -353,15 +360,28 @@ char* xfs_copy(char* from, char* to) {
 
     strcpy(user_path, xfs_state->path);
     // переходим в папку, откуда будем осуществлять копирование
-    if (xfs_cd(output_buf, from, xfs_state) == 0) {
-        read_file_data(to ,from, xfs_state);
-        snprintf(output_buf, PATH_MAX*2 + 20, "Извлечение %s%s в %s\n", xfs_state->path, from, to);
-    };
-    // если была найдена неизвестная директория
-    if (strcmp(output_buf, "Неизвестная директория!\n") == 0) {
+    switch (xfs_cd(output_buf, from, xfs_state)) {
+        case UNKNOWN_DIR: {
+            return output_buf;
+        }
+        case ONLY_FILE: {
+            if (read_file_data(to ,from, xfs_state) == ERR_TO_OPEN_FILE) {
+                strcat(output_buf, "Невозможно осуществить копирование по данному пути ");
+                strcat(output_buf, to);
+                strcat(output_buf, "\n");
+            } else {
+                snprintf(output_buf, PATH_MAX * 2 + 20, "Извлечение %s%s в %s\n", xfs_state->path, from, to);
+            }
+            return output_buf;
+        }
+    }
+
+    if (dir_copy(output_buf, to, xfs_state) == ERR_COPY_FILE) {
+        strcat(output_buf, "Невозможно осуществить копирование по данному пути ");
+        strcat(output_buf, to);
+        strcat(output_buf, "\n");
         return output_buf;
     }
-    dir_copy(output_buf, to, xfs_state);
     // возвращаемся в ту директорию, где и начинали операцию копирования
     xfs_cd(output_buf, user_path, xfs_state);
     return output_buf;
@@ -407,17 +427,17 @@ int xfs_cd(char* output_buf, char* path, struct xfs_state* xfs_state) {
 //            xfs_state->address = inode * xfs_state->sb.sb_inodesize;
 //            // читаем информацию о полученном inode, перемещая указатель
 //            read_dinode(xfs_state, &xfs_state->dinode);
-            return 0;
+            return ONLY_FILE;
         }
         // если такой директории не существует
         if (inode == -1) {
             // восстанавлием состояние полей dinode и address
             xfs_state->dinode = saved_dinode;
             xfs_state->address = saved_address;
-            strcat(output_buf, "Неизвестная директория\n");
+            strcat(output_buf, "Неизвестная директория или файл в xfs\n");
 //            printf("Неизвестная директория\n");
             free(tempstr);
-            return -1;
+            return UNKNOWN_DIR;
         }
         xfs_state->address = inode * xfs_state->sb.sb_inodesize;
         // читаем информацию о полученном inode, перемещая указатель
