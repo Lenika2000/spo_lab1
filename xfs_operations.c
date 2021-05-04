@@ -280,6 +280,7 @@ void read_file_data(char* to, char* filename, struct xfs_state* xfs_state) {
     fseek(xfs_state->file_pointer, bmbt.br_startoff, SEEK_SET);
     int buf_size = 512;
     char *buffer = malloc(sizeof(char) * buf_size);
+//    strcat(to, xfs_state->path);
     strcat(to, filename);
     FILE* fp = fopen(to, "wb");
     int file_size = dinode.di_core.di_size;
@@ -326,14 +327,15 @@ void dir_copy(char* output_buf, char* to, struct xfs_state* xfs_state) {
             // текущая сущность - файл
             read_file_data(to ,buffer2, xfs_state);
             snprintf(out_buf, PATH_MAX*2 + 20, "Извлечение %s%s в %s\n", xfs_state->path, buffer2, to);
+            // убираем скопированный файл
             token = strtok(NULL, "\n");
-            if (token == NULL) {
+//            if (token == NULL) {
                 split_path(to, NULL);
-            }
+//            }
             strcat(output_buf, out_buf);
             buffer[0] = '\0';
             // выделение очередной части строки
-            token = strtok(NULL, "\n");
+//            token = strtok(NULL, "\n");
         }
     }
 }
@@ -355,6 +357,8 @@ void xfs_copy(char* output_buf, char* from, char* to, struct xfs_state* xfs_stat
     if (output_buf[0] != '\0') {
         return;
     }
+    // создаем директорию, которую копируем
+    mkdir(strcat(to, xfs_state->path) , ACCESSPERMS);
     dir_copy(output_buf, to, xfs_state);
     // возвращаемся в ту директорию, где и начинали операцию копирования
     xfs_cd(output_buf, user_path, xfs_state);
